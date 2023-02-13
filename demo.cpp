@@ -1,480 +1,372 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include <iostream>
+#include <algorithm>
+#include <cstdlib>
+#include <time.h>
+#include <queue>
+#include <map>
+using namespace std;
 
-
-int menu(){
-    int choice;
- 
-    system("cls");
-    printf("\n\n                              CPU SCHEDULER");
-    printf("\n-------------------------------------------------------------------------------");
-    printf("\n     Choose the algorithm you want to use to simulate the scheduler. \n");
-    printf("\n                  < 1 > Firts-Come, First-Serve (FCFS)");
-    printf("\n                  < 2 > Shortest-Job-First- (SRTF) ");
-    printf("\n                  < 3 > Priority scheduler ");
-    printf("\n                  < 4 > Round Robin (RR) ");
-    printf("\n                  < 5 > Exit \n");
-    printf("\n     Your choice: ");
-    scanf("%i", &choice);
-
-    return choice;
-}
-
-int painel(){
-    int choice;
-    system("cls");
-    printf("\n\n                              CPU SCHEDULER");
-    printf("\n-------------------------------------------------------------------------------\n\n");
-    printf("                           Process definition.\n\n");
-    printf("\n                  < 1 > Use processes established by the program.");
-    printf("\n                  < 2 > Introduce new processes.");
-    printf("\n\n    Your choice: ");
-    scanf("%i", &choice);
-    if (choice>2)
-        painel();
-    else
-        return choice;
-}
-
-void top(){
-    system("cls");
-    printf("\n\n                              CPU SCHEDULER");
-    printf("\n-------------------------------------------------------------------------------\n\n");
-}
-
-struct processes{
-    int id; 
-    int dur;
-    int prio;
-    int execu;
-    int esp;
-    struct processes *next;
-    /*
-        id - process identification
-        dur - process duration time
-        exe - process runtime
-        esp - process waiting time
-    */
+class Process {
+	int id;
+	int burstTime;
+	int arrivalTime;
+	int completionTime;
+	int turnAroundTime;
+	int waitingTime;
+public :
+	int getId() {
+		return id;
+	}
+	int getBurstTime() {
+		return burstTime;
+	}
+	int getArrivalTime() {
+		return arrivalTime;
+	}
+	int getCompletionTime() {
+		return completionTime;
+	}
+	int getTurnAroundTime() {
+		return turnAroundTime;
+	}
+	int getWaitingTime() {
+		return waitingTime;
+	}
+	void setId(int id) {
+		this->id = id;
+	}
+	void setBurstTime(int burstTime) {
+		this->burstTime = burstTime;
+	}
+	void setArrivalTime(int arrivalTime) {
+		this->arrivalTime = arrivalTime;
+	}
+	void setCompletionTime(int completionTime) {
+		this->completionTime = completionTime;
+	}
+	void setTurnAroundTime(int turnAroundTime) {
+		this->turnAroundTime = turnAroundTime;
+	}
+	void setWaitingTime(int waitingTime) {
+		this->waitingTime = waitingTime;
+	}
 };
 
-struct processes *process_input(int id, int dur, int prio){
-    struct processes *loc;
-    loc = (struct processes*)malloc(sizeof(struct processes));
-    if(loc == NULL){
-        printf("Allocation error.\nEnd of execution\n");
-        exit(1);
-    };
-    loc->id = id;
-    loc->dur = dur;
-    loc->prio = prio;
-    loc->execu = 0;
-    loc->esp = 0;
-    loc->next = NULL;
+bool compareByArrival(Process p, Process q)
+{
+    return p.getArrivalTime() < q.getArrivalTime();
 }
 
-void list_processes(struct processes *loc){
-    struct processes *tmp = loc;
-    printf("\n\n\t\t\tList of processes\n\n");
-    while(tmp != NULL){
-        printf("\tProcess: %d\tPriority: %d\tDuration: %d\n", tmp->id, tmp->prio, tmp->dur);
-        tmp = tmp->next;
-    }
-    printf("\n");
+bool compareByBurst(Process p, Process q)
+{
+    return p.getBurstTime() < q.getBurstTime();
 }
 
-void fcfs(struct processes *loc, int process_number) {
-    int time = 0, start, end, waiting_time=0, turnaround_time=0;
-    int p[process_number], i=0;
-    struct processes *tmp = loc;
-    printf("\n\t\tFirts-Come, First-Serve (FCFS) Scheduling\n\n");
-    while (tmp != NULL){
-        start = time;
-        time += tmp->dur;
-        p[i] = time;
-        end = time;
-        printf("\tProcess: %d\t Duration: %d\tWaiting time: %d \tFinish: %d\n", tmp->id, tmp->dur, start, end);
-        waiting_time += start;
-        tmp = tmp->next;
-        i++;
-    }
-    i=0;
-    printf("\n\t\tAverage Waiting Time= %f\n\n\n",waiting_time*1.0/process_number);
-    printf("\t    Visually simulating scaling.");
-    printf("\n\n\t\t    ");
-    for (i=0; i<process_number; i++){
-            printf("| P%d ", i+1);
-    }
-    printf("|");
-    printf("\n\t\t    0  ");
-    for (i=0; i<process_number; i++)
-        printf("  %d ", p[i]);
+bool compareById(Process p, Process q)
+{
+    return p.getId() < q.getId();
 }
 
-void sjf(struct processes *loc, int process_number){
-    int execution_time, shortest, start, end, waiting_time, duration;
-    struct processes *copy, *src_tmp, *tmp, *before_shortest;
-    printf("\n\t\tShortest-Job-First- (SRTF)\n\n ");
-    src_tmp = loc;
-    copy = tmp = NULL;
-    while (src_tmp != NULL){/*making copies of the processes*/
-        if(copy == NULL){
-            copy = process_input(src_tmp->id, src_tmp->dur, src_tmp->prio);
-            tmp = copy;
-        }
-        else{
-            tmp->next = process_input(src_tmp->id, src_tmp->dur, src_tmp->prio);
-            tmp = tmp->next;
-        }
-        src_tmp = src_tmp->next;
-    }
-    execution_time = 0;
-    while(copy != NULL){/*new process search*/
-        before_shortest = NULL;
-        shortest = copy->dur;
-        tmp = copy->next;
-        src_tmp = copy;
-        while(tmp != NULL){
-            if(tmp->dur < shortest){
-                shortest = tmp->dur;
-                before_shortest = src_tmp;
-            }
-            src_tmp = tmp;
-            tmp = tmp->next;
-        }
-        if(before_shortest == NULL){/*process is executed and copy is killed and allocates the 1st process s is less*/
-            start = execution_time;
-            execution_time += copy->dur;
-            duration = copy->dur;
-            end = execution_time;
-            printf("\tProcess: %d\t Duration: %d\tWaiting time: %d \tFinish: %d\n", copy->id, duration, start, end);
-            waiting_time += end;
-            src_tmp = copy;
-            copy = copy->next;
-            free(src_tmp);
-        }
-        else{ /*allocates the 1st process if there is no smaller one*/
-            tmp = before_shortest->next;
-            start = execution_time;
-            execution_time += tmp->dur;
-            duration = tmp->dur;
-            end = execution_time;
-            printf("\tProcess: %d\t Duration: %d\tWaiting time: %d \tFinish: %d\n", tmp->id, duration, start, end);
-            before_shortest->next = tmp->next;
-            free(tmp);
-        }
-    }
-    printf("\n\t\tAverage Waiting Time= %f\n",waiting_time*1.0/process_number);
-} 
+void display(Process P[], int jobCount, float avgwt = 0, float avgtat = 0)
+{
+	sort(P,P+jobCount,compareById);
+	cout<<"\n\n\t\t The Process Status \n\n";
+	cout<<"\tProcess ID\tArrival Time\tBurst Time\tCompletion Time\tTurn Around Time\tWaiting Time";
+	for (int i = 0; i < jobCount; ++i)
+		cout<<"\n\t\t"<<P[i].getId()<<"\t\t"<<P[i].getArrivalTime()<<"\t\t"<<P[i].getBurstTime()<<"\t\t"
+		<<P[i].getCompletionTime()<<"\t\t"<<P[i].getTurnAroundTime()<<"\t\t"<<P[i].getWaitingTime();
+	cout<<"\n\n\t\tAverage Waiting Time: "<<avgwt;
+	cout<<"\n\t\tAverage Turn Around Time: "<<avgtat;
+	cout<<"\n\n\n";
 
-//void sjf_simulator(struct processes *loc, int process_number){
-//    int execution_time, shortest, start, end, duration, i=0, p[process_number];
-//    struct processes *copy, *src_tmp, *tmp, *before_shortest;
-//    printf("\n\t    Visually simulating scaling\n\n ");
-//    src_tmp = loc;
-//    copy = tmp = NULL;
-//    while (src_tmp != NULL){/*copying the processes*/
-//        if(copy == NULL){
-//            copy = process_input(src_tmp->id, src_tmp->dur, src_tmp->prio);
-//            tmp = copy;
-//        }
-//        else{
-//            tmp->next = process_input(src_tmp->id, src_tmp->dur, src_tmp->prio);
-//            tmp = tmp->next;
-//        }
-//        src_tmp = src_tmp->next;
-//    }
-//    execution_time = 0;
-//    printf("\t\t  ");
-//    while(copy != NULL){/*new process search*/
-//        before_shortest = NULL;
-//        shortest = copy->dur;
-//        tmp = copy->next;
-//        src_tmp = copy;
-//        while(tmp != NULL){
-//            if(tmp->dur < shortest){
-//                shortest = tmp->dur;
-//                before_shortest = src_tmp;
-//            }
-//            src_tmp = tmp;
-//            tmp = tmp->next;
-//        }
-//        if(before_shortest == NULL){/*process is executed and copy is killed and allocates the 1st process s is less*/
-//            start = execution_time;
-//            execution_time += copy->dur;
-//            duration = copy->dur;
-//            end = execution_time;
-//            p[i]=execution_time;
-//            printf("| P%d ", copy->id);
-//            src_tmp = copy;
-//            copy = copy->next;
-//            free(src_tmp);
-//        }
-//        else{ /*allocates the 1st process if there is no smaller one*/
-//            tmp = before_shortest->next;
-//            start = execution_time;
-//            execution_time += tmp->dur;
-//            duration = tmp->dur;
-//            p[i]=execution_time;
-//            end = execution_time;
-//            printf("| P%d ", tmp->id);
-//            before_shortest->next = tmp->next;
-//            free(tmp);
-//        }
-//        i++;
-//    }
-//    printf("|");
-//    printf("\n\t\t  0  ");
-//    for (i=0; i<process_number; i++)
-//        printf("  %d ", p[i]);
-//}
-
-void priority_scheduler(struct processes *loc, int process_number){
-    int execution_time, start, maior, end, waiting_time, duration;
-    struct processes *copy, * src_tmp, *tmp, *maior_prio;
-    printf("\n\t\tPriority scheduler \n\n");
-    src_tmp = loc;
-    copy = tmp = NULL;
-    while (src_tmp != NULL){/*copying the processes*/
-        if(copy == NULL){
-            copy = process_input(src_tmp->id, src_tmp->dur, src_tmp->prio);
-            tmp = copy;
-        }
-        else{
-            tmp->next = process_input(src_tmp->id, src_tmp->dur, src_tmp->prio);
-            tmp = tmp->next;
-        }
-        src_tmp = src_tmp->next;
-    }
-    execution_time = 0;
-    while(copy != NULL){/*check next process*/
-        maior_prio = NULL;
-        maior = copy->prio;
-        tmp = copy->next;
-        src_tmp = copy;
-        while(tmp != NULL){
-            if(tmp->prio < maior){
-                maior = tmp->prio;
-                maior_prio = src_tmp;
-            }
-            src_tmp = tmp;
-            tmp = tmp->next;
-        }
-        if(maior_prio == NULL){/*ver se 1º tem prioridade maior*/
-            start = execution_time;
-            execution_time += copy->dur;
-            duration = copy->dur;
-            end = execution_time;
-            printf("\tProcess: %d\t Duration: %d\tWaiting time: %d \tFinish: %d\n", copy->id, duration, start, end);
-            waiting_time += end;
-            src_tmp = copy->next;
-            free(copy);
-            copy = src_tmp;
-        }
-        else {/*if 1st does not have higher priority*/
-            tmp = maior_prio->next;
-            start = execution_time;
-            execution_time += tmp->dur;
-            duration = tmp->dur;
-            end = execution_time;
-            printf("\tProcess: %d\t Duration: %d\tWaiting time: %d \tFinish: %d\n", tmp->id, duration, start, end);
-            maior_prio->next = tmp->next;
-            free(tmp);
-        }
-    }
-    printf("\n\t\tAverage Waiting Time= %f\n",waiting_time*1.0/process_number);
 }
 
-//void priority_scheduler_simulator(struct processes *loc, int process_number){
-//    int execution_time, start, maior, end, duration, i=0, p[process_number];
-//    struct processes *copy, * src_tmp, *tmp, *maior_prio;
-//    printf("\n\t    Visually simulating scaling\n\n ");
-//    src_tmp = loc;
-//    copy = tmp = NULL;
-//    while (src_tmp != NULL){/*copying the processes*/
-//        if(copy == NULL){
-//            copy = process_input(src_tmp->id, src_tmp->dur, src_tmp->prio);
-//            tmp = copy;
-//        }
-//        else{
-//            tmp->next = process_input(src_tmp->id, src_tmp->dur, src_tmp->prio);
-//            tmp = tmp->next;
-//        }
-//        src_tmp = src_tmp->next;
-//    }
-//    execution_time = 0;
-//    printf("\t\t  ");
-//    while(copy != NULL){/*check next process*/
-//        maior_prio = NULL;
-//        maior = copy->prio;
-//        tmp = copy->next;
-//        src_tmp = copy;
-//        while(tmp != NULL){
-//            if(tmp->prio < maior){
-//                maior = tmp->prio;
-//                maior_prio = src_tmp;
-//            }
-//            src_tmp = tmp;
-//            tmp = tmp->next;
-//        }
-//        if(maior_prio == NULL){/*see if 1st has higher priority*/
-//            start = execution_time;
-//            execution_time += copy->dur;
-//            p[i]=execution_time;
-//            duration = copy->dur;
-//            end = execution_time;
-//            printf("| P%d ", copy->id);
-//            src_tmp = copy->next;
-//            free(copy);
-//            copy = src_tmp;
-//        }
-//        else {/* if 1st does not have higher priority*/
-//            tmp = maior_prio->next;
-//            start = execution_time;
-//            execution_time += tmp->dur;
-//            p[i]=execution_time;
-//            duration = tmp->dur;
-//            end = execution_time;
-//            printf("| P%d ", tmp->id);
-//            maior_prio->next = tmp->next;
-//            free(tmp);
-//        }
-//        i++;
-//    }
-//    printf("|");
-//    printf("\n\t\t  0  ");
-//    for (i=0; i<process_number; i++)
-//        printf("  %d ", p[i]);
-//}
-
-void robbin_round(struct processes *loc, int quantum, int process_number){
-    int count, j, time, remain, flag=0;
-    int waiting_time=0, turnaround_time=0, at[10], bt[10], rt[10];
-    remain=process_number;
-    struct processes *copy, *src_tmp, *tmp, *slot;
-    printf("\n\t\tRound Robin (RR) - Quantum: %d\n", quantum);
-    src_tmp = loc;
-    for(count=0; count < process_number; count++){
-            bt[count] = src_tmp->dur;
-            rt[count] = bt[count];
-            src_tmp = src_tmp->next;
-    }
-    for(time = 0, count = 0; remain !=0;){
-        at[count]=time;
-        if(rt[count] <= quantum && rt[count] > 0){
-            time+=rt[count];
-            rt[count]=0;
-            flag=1;
-        }
-        else if(rt[count]>0){
-            rt[count]-=quantum;
-            time+=quantum;
-        }
-        if(rt[count]==0 && flag==1){
-            remain--;
-            printf("\tProcess: %d\tWaiting time: %d \tFinish: %d\n", count+1, time-bt[count], time);
-            waiting_time+=time-bt[count];
-            turnaround_time+=time;
-            flag=0;
-        }
-        if(count == process_number-1)
-            count=0;
-        else if(at[count]<=time)
-            count++;
-        else
-            count=0;
-    }
-    printf("\n\t      Average Waiting Time= %f\n",waiting_time*1.0/process_number); 
-    printf("\t   Avgerage Turnaround Time = %f",turnaround_time*1.0/process_number);
-    free(src_tmp);
+void getData(Process P[], int &jobCount)
+{
+	int x;
+	for(int i=0; i<jobCount; i++)
+	{
+		P[i].setId(i+1);
+		cout<<"\n\t Process ID: ";
+		cout<<P[i].getId();
+		cout<<"\n\t Enter the Process Arrival Time: ";
+		cin>>x;
+		P[i].setArrivalTime(x);
+		cout<<"\n\t Enter the Process Burst Time: ";
+		cin>>x;
+		P[i].setBurstTime(x);
+	}
 }
 
-int main(){
-    int choice, es_proc, process_number, i, id, dur, prio, position=0;
-    do{
-    if (position==0){
-        es_proc=painel();
-    }
-    else
-        choice = menu();
-    struct processes *list_proc, *tmp_proc;
-    if(es_proc == 1){
-        process_number = 4;
-        list_proc = process_input(1, 12, 2);
-        list_proc->next = process_input(2, 2, 1); tmp_proc = list_proc->next;
-        tmp_proc->next  = process_input(3,  8, 4); tmp_proc = tmp_proc->next;
-        tmp_proc->next  = process_input(4,  10, 3);
-        choice = menu();
-    }
-    else if(es_proc==2){
-        top();
-        printf("\n\n  NOTE: Choose preferably for more than 3 processes.");
-        printf("\n\n   Enter the number of processes: ");
-        scanf("%d", &process_number);
-        for(i=0; i<process_number;i++){
-            system("cls");
-            top();
-            printf("\n             Process %d: ", i+1);
-            printf("\n\nEnter your duration time (Burst time) P[%d]: ", i+1);
-            scanf("%d", &dur);
-            printf("Enter your execution priority P[%d]: ", i+1);
-            scanf("%d", &prio);
-            if(i==0)
-                list_proc = process_input(i+1, dur, prio);
-            else if(i==1){
-                list_proc->next = process_input(i+1, dur, prio); tmp_proc = list_proc->next;
-            }
-            else if(i==process_number-1){
-                tmp_proc->next  = process_input(i+1,  dur, prio);
-            }
-            else{
-                tmp_proc->next  = process_input(i+1,  dur, prio); tmp_proc = tmp_proc->next;
-            }
-        }
-        position=1;
-        choice = menu();
-    }
+void generateRandomData(Process P[], int jobCount)
+{
+	srand(time(NULL));
+	for(int i=0; i<jobCount; i++)
+	{
+		P[i].setId(i+1);
+		P[i].setArrivalTime(rand()%(16));
+		P[i].setBurstTime(rand()%20+2);
+		P[i].setCompletionTime(0);
+		P[i].setTurnAroundTime(0);
+		P[i].setWaitingTime(0);
+	}
 
-    if(choice == 1){
-        system("cls");
-        list_processes(list_proc);
-        fcfs(list_proc, process_number);
-        printf("\n\n\t< 1 > To go back\nChoose: ");
-        int i;
-        scanf("%d", &i);
-    }
-    else if (choice == 2){
-        system("cls");
-        list_processes(list_proc);
-        sjf(list_proc, process_number);
-//        sjf_simulator(list_proc, process_number);
-        printf("\n\n\t< 1 > To go back\nChoose: ");
-        int i;
-        scanf("%d", &i);
-    }
-    else if (choice == 3){
-        system("cls");
-        list_processes(list_proc);
-        priority_scheduler(list_proc, process_number);
-//        priority_scheduler_simulator(list_proc, process_number);
-        printf("\n\n\t< 1 > To go back\nChoose: ");
-        int i;
-        scanf("%d", &i);
-    }
-    else if(choice == 4){
-        system("cls");
-        int quantum;
-        list_processes(list_proc);
-        printf("\nEnter the desired time quantum: ");
-        scanf("%d", &quantum);
-        robbin_round(list_proc, quantum, process_number);
-        printf("\n\n\t< 1 > To go back\nChoose: ");
-        int i;
-        scanf("%d", &i);
-    }
-    else if(choice == 5){
-        printf("\n\nEnd of program.\n\n");
-        exit(2);
-    }
-    }while(choice <= 6);
-    return 0;
+}
+
+
+void RoundRobin(Process P[], int jobCount)
+{
+	cout<<"\n\t*** Round Robin ***\n";
+    int tQuantum;
+    cout<<"\t Time quantum : ";
+    cin>>tQuantum;
+    bool inQueue[jobCount+1];
+  	fill(inQueue, inQueue+jobCount+1, false);
+    map<int, int> id_compl;
+	int jobDone = 0,curTime=0;
+	queue<Process> ready_queue;
+	do {
+		for (int i = 0; i < jobCount; ++i) {
+			if(!inQueue[P[i].getId()] && P[i].getArrivalTime()==curTime) {
+				ready_queue.push(P[i]);
+				inQueue[P[i].getId()]=true;
+			}
+		}
+		if(!ready_queue.empty()) {
+    		Process p = ready_queue.front();
+    		ready_queue.pop();
+    		int tq=min(tQuantum, p.getBurstTime());
+    		// cout<<"p"<<p.getId()<<"->";
+    		int b=p.getBurstTime();
+    		p.setBurstTime(p.getBurstTime()-tq);
+    		for (int i = curTime+1; i <= curTime+tq; ++i)
+    		{
+    			for (int j = 0; j < jobCount; ++j)
+    			{
+    				if(!inQueue[P[j].getId()] && P[j].getArrivalTime()==i) {
+					ready_queue.push(P[j]);
+					inQueue[P[j].getId()]=true;
+					}
+    			}
+    		}
+    		curTime += tq;
+    		if(p.getBurstTime()==0) {
+    			jobDone++;
+    			p.setCompletionTime(curTime);
+    			id_compl[p.getId()]=p.getCompletionTime();
+    		} else {
+    			ready_queue.push(p);
+    		}
+		} else {
+			curTime++;
+		}
+	} while(jobDone!=jobCount);
+
+	float avgWaitTime=0, avgTurnAroundTime=0;
+
+	for (int i = 0; i < jobCount; ++i)
+	{
+		P[i].setCompletionTime(id_compl[P[i].getId()]);
+		P[i].setTurnAroundTime(P[i].getCompletionTime() - P[i].getArrivalTime());
+		P[i].setWaitingTime(P[i].getTurnAroundTime() - P[i].getBurstTime());
+		avgWaitTime+=P[i].getWaitingTime();
+		avgTurnAroundTime+=P[i].getTurnAroundTime();
+	}
+
+    avgWaitTime = (float)avgWaitTime/jobCount;
+	avgTurnAroundTime = (float)avgTurnAroundTime/jobCount;
+
+    display(P,jobCount,avgWaitTime,avgTurnAroundTime);
+
+}
+
+void FirstComeFirstServed(Process P[], int jobCount)
+{
+
+    cout<<"\n\t*** FCFS ***\n";
+
+    float avgWaitTime=0, avgTurnAroundTime=0;
+
+    sort(P, P+jobCount, compareByArrival); // Sorting the processes according to Arrival Time
+
+	for(int i = 0, prevEnd =0 ;i < jobCount; i++){
+		P[i].setCompletionTime(max(prevEnd, P[i].getArrivalTime()) + P[i].getBurstTime());
+		P[i].setTurnAroundTime(P[i].getCompletionTime() - P[i].getArrivalTime());
+		P[i].setWaitingTime(P[i].getTurnAroundTime() - P[i].getBurstTime());
+		prevEnd = P[i].getCompletionTime();
+
+		avgWaitTime+=P[i].getWaitingTime();
+		avgTurnAroundTime+=P[i].getTurnAroundTime();
+	}
+
+	avgWaitTime = (float)avgWaitTime/jobCount;
+	avgTurnAroundTime = (float)avgTurnAroundTime/jobCount;
+
+    display(P,jobCount,avgWaitTime,avgTurnAroundTime);
+}
+
+void ShortestJobFirst(Process P[], int jobCount) // Shortest job first non preemptive
+{
+	cout<<"\n\t*** SJF ***\n";
+
+	int executedCount = 0;
+	bool processActive[jobCount];
+	fill(processActive, processActive+jobCount, false);
+	vector <Process> processInQueue;
+	map<int, int> id_compl;
+	for(int time = 0; executedCount<jobCount;) {
+		for(int i=0; i<jobCount; i++) {
+			if(!processActive[P[i].getId()-1] && P[i].getArrivalTime()<=time){ 		//To check if process is executed before and also whether it has arrived or not
+				processInQueue.push_back(P[i]);				// Pushed to Process Arrived Vector
+				processActive[P[i].getId()-1] = true;
+			}
+		}
+		if(processInQueue.size()!=0) {
+			vector<Process>::iterator minPosition = min_element(processInQueue.begin(),
+			processInQueue.end(), compareByBurst);
+			Process processMinBurstTime = *minPosition;
+			time += processMinBurstTime.getBurstTime();
+			id_compl[processMinBurstTime.getId()] = time;
+			executedCount++;
+			processInQueue.erase(minPosition);
+
+		} else {
+			time++;
+		}
+	}
+
+	float avgWaitTime=0, avgTurnAroundTime=0;
+
+	for (int i = 0; i < jobCount; ++i)
+	{
+		P[i].setCompletionTime(id_compl[P[i].getId()]);
+		P[i].setTurnAroundTime(P[i].getCompletionTime() - P[i].getArrivalTime());
+		P[i].setWaitingTime(P[i].getTurnAroundTime() - P[i].getBurstTime());
+		avgWaitTime+=P[i].getWaitingTime();
+		avgTurnAroundTime+=P[i].getTurnAroundTime();
+	}
+
+    avgWaitTime = (float)avgWaitTime/jobCount;
+	avgTurnAroundTime = (float)avgTurnAroundTime/jobCount;
+
+    display(P,jobCount,avgWaitTime,avgTurnAroundTime);
+}
+
+void ShortestJobRemainingFirst(Process P[], int jobCount)
+{
+	cout<<"\n\t*** SJRF ***\n";
+	int time = 0, executedCount = 0;
+	float avgTurnAroundTime = 0, avgWaitTime = 0;
+	vector <Process> processInQueue;
+	bool inQueue[jobCount];
+	fill(inQueue, inQueue+jobCount, false);
+	map<int,int> pid_compl;
+	while(executedCount!=jobCount)
+	{
+		for(int i=0; i<jobCount; i++)
+		{
+			if((P[i].getArrivalTime()<=time)&&(inQueue[i]==false))
+			{
+				processInQueue.push_back(P[i]);
+				inQueue[i]=true;
+			}
+
+		}
+
+		if(processInQueue.size()!=0)
+		{
+			vector<Process>::iterator minPosition = min_element(processInQueue.begin(),
+				processInQueue.end(), compareByBurst);
+			(*minPosition).setBurstTime((*minPosition).getBurstTime()-1);
+			time++;
+			if((*minPosition).getBurstTime()==0)
+			{
+				pid_compl[(*minPosition).getId()]=time;
+				executedCount++;
+				processInQueue.erase(minPosition);
+			}
+
+		}
+		else {
+			time++;
+		}
+	}
+	for(int i=0; i<jobCount ; i++){
+		P[i].setCompletionTime(pid_compl[P[i].getId()]);
+		P[i].setTurnAroundTime(P[i].getCompletionTime() - P[i].getArrivalTime());
+		P[i].setWaitingTime(P[i].getTurnAroundTime() - P[i].getBurstTime());
+		avgWaitTime+=P[i].getWaitingTime();
+		avgTurnAroundTime+=P[i].getTurnAroundTime();
+	}
+	avgWaitTime = (float)avgWaitTime/jobCount;
+	avgTurnAroundTime = (float)avgTurnAroundTime/jobCount;
+
+ 	display(P,jobCount,avgWaitTime,avgTurnAroundTime);
+
+}
+
+int main()
+{
+	int schedulingType, dataInputChoice, jobCount;
+	while(1) {
+
+		cout<<"\n\t*****CPU Scheduling Algorithms*****\n";
+
+		cout<<"\t 1. First Come First Served (FCFS)\n\t 2. Shortest Job First (SJF)\n\t 3. Round Robin (RR)\n\t 4. Shortest Job Remaining First (SJRF)\n\t 5. All\n\t 0. Exit\n";
+		cout<<"\n\t Enter your choice [0-5] : ";
+
+		cin>>schedulingType;
+
+		if(schedulingType == 0) {
+			exit(1);
+		}
+
+		cout<<"\n\t Manually enter data or Auto generated data? \n\t 1. Manually \t 2. Random Generated \n";
+		cout<<"\n\t Enter your choice [1/2] : ";
+
+		cin>>dataInputChoice;
+
+		cout<<"\t No. of processes : ";
+		cin>>jobCount;
+
+		Process P[jobCount];
+
+		switch(dataInputChoice){
+			case 1: {
+				getData(P,jobCount);
+				break;
+			}
+
+			case 2: {
+				generateRandomData(P, jobCount);
+			}
+		}
+
+		switch(schedulingType) {
+			case 1 : {
+				FirstComeFirstServed(P, jobCount);
+				break;
+			}
+			case 2 : {
+				ShortestJobFirst(P, jobCount);
+				break;
+			}
+			case 3 : {
+				RoundRobin(P, jobCount);
+				break;
+			}
+			case 4 : {
+				ShortestJobRemainingFirst(P, jobCount);
+				break;
+			}
+			case 5 : {
+                FirstComeFirstServed(P, jobCount);
+                ShortestJobFirst(P, jobCount);
+                RoundRobin(P, jobCount);
+                ShortestJobRemainingFirst(P, jobCount);
+				break;
+			}
+		}
+	}
+	return 0;
 }
